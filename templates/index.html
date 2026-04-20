@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Tư Vấn Máy Tính - Hệ Chuyên Gia{% endblock %}
+
+{% block content %}
+<div class="recommendation-page">
+    <div class="page-header">
+        <h1>🖥️ Hệ Thống Tư Vấn Máy Tính Để Bàn</h1>
+        <p>Hãy chọn các tiêu chí của bạn, chúng tôi sẽ giúp bạn tìm máy tính phù hợp nhất</p>
+    </div>
+
+    <div class="form-section">
+        <form id="recommendationForm">
+            <div class="form-group">
+                <label for="brand">Thương hiệu:</label>
+                <select id="brand" name="brand" required>
+                    <option value="">-- Chọn thương hiệu --</option>
+                    {% for brand in brands %}
+                    <option value="{{ brand }}">{{ brand }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="purpose">Mục đích sử dụng:</label>
+                <select id="purpose" name="purpose" required>
+                    <option value="">-- Chọn mục đích --</option>
+                    {% for purpose in purposes %}
+                    <option value="{{ purpose }}">{{ purpose }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="special">Yêu cầu đặc biệt:</label>
+                <select id="special" name="special" required>
+                    <option value="">-- Chọn yêu cầu --</option>
+                    {% for special in specials %}
+                    <option value="{{ special }}">{{ special }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="cpu">CPU:</label>
+                <select id="cpu" name="cpu" required>
+                    <option value="">-- Chọn CPU --</option>
+                    {% for cpu in cpus %}
+                    <option value="{{ cpu }}">{{ cpu }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="ram">RAM:</label>
+                <select id="ram" name="ram" required>
+                    <option value="">-- Chọn RAM --</option>
+                    {% for ram in rams %}
+                    <option value="{{ ram }}">{{ ram }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="ssd">SSD:</label>
+                <select id="ssd" name="ssd" required>
+                    <option value="">-- Chọn SSD --</option>
+                    {% for ssd in ssds %}
+                    <option value="{{ ssd }}">{{ ssd }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="price">Mức giá:</label>
+                <select id="price" name="price" required>
+                    <option value="">-- Chọn mức giá --</option>
+                    {% for price in prices %}
+                    <option value="{{ price }}">{{ price }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">🔍 Tư Vấn</button>
+                <button type="reset" class="btn btn-secondary">🔄 Nhập lại</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('recommendationForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = {
+            brand: document.getElementById('brand').value,
+            purpose: document.getElementById('purpose').value,
+            special: document.getElementById('special').value,
+            cpu: document.getElementById('cpu').value,
+            ram: document.getElementById('ram').value,
+            ssd: document.getElementById('ssd').value,
+            price: document.getElementById('price').value,
+        };
+
+        try {
+            const response = await fetch('/api/recommend', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showRecommendation(data);
+            } else {
+                showAlert(data.message, 'error');
+            }
+        } catch (error) {
+            showAlert('Lỗi: ' + error.message, 'error');
+        }
+    });
+
+    function showRecommendation(data) {
+        let resultHTML = `
+            <h3>Bạn nên chọn máy: <span class="highlight">${data.machine_name}</span></h3>
+        `;
+
+        if (data.image_exists) {
+            resultHTML += `<div class="machine-image"><img src="${data.image_url}" alt="${data.machine_name}"></div>`;
+        }
+
+        resultHTML += `
+            <div class="machine-description">
+                <h4>📋 Mô tả chi tiết:</h4>
+                <p>${data.description}</p>
+            </div>
+
+            <div class="selection-summary">
+                <h4>📊 Tiêu chí bạn đã chọn:</h4>
+                <ul>
+                    <li><strong>Thương hiệu:</strong> ${data.selections.brand}</li>
+                    <li><strong>Mục đích:</strong> ${data.selections.purpose}</li>
+                    <li><strong>Yêu cầu đặc biệt:</strong> ${data.selections.special}</li>
+                    <li><strong>CPU:</strong> ${data.selections.cpu}</li>
+                    <li><strong>RAM:</strong> ${data.selections.ram}</li>
+                    <li><strong>SSD:</strong> ${data.selections.ssd}</li>
+                    <li><strong>Mức giá:</strong> ${data.selections.price}</li>
+                </ul>
+            </div>
+
+            <div class="result-actions">
+                <a href="/machines/${data.p_code}" class="btn btn-primary">📄 Xem chi tiết</a>
+                <button class="btn btn-secondary" onclick="closeModal('resultModal')">Đóng</button>
+            </div>
+        `;
+
+        document.getElementById('resultInfo').innerHTML = resultHTML;
+        document.getElementById('resultModal').style.display = 'block';
+    }
+</script>
+{% endblock %}

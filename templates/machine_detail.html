@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}{{ machine_name }} - Chi tiết máy{% endblock %}
+
+{% block content %}
+<div class="machine-detail-page">
+    <div class="back-link">
+        <a href="/" class="btn btn-secondary">← Quay lại trang chủ</a>
+    </div>
+
+    <div class="machine-detail-container">
+        <div class="detail-header">
+            <h1>{{ machine_name }}</h1>
+            <p class="machine-code">Mã sản phẩm: <strong>{{ machine_code }}</strong></p>
+        </div>
+
+        {% if image_exists %}
+        <div class="detail-image">
+            <img src="{{ image_url }}" alt="{{ machine_name }}" class="machine-img-large">
+        </div>
+        {% else %}
+        <div class="no-image">
+            <p>Hình ảnh không khả dụng</p>
+        </div>
+        {% endif %}
+
+        <div class="detail-description">
+            <h3>📝 Thông tin chi tiết:</h3>
+            <p>{{ description }}</p>
+        </div>
+
+        <div class="detail-actions">
+            <a href="/" class="btn btn-primary">🔍 Tư vấn thêm</a>
+            <button onclick="window.print()" class="btn btn-secondary">🖨️ In trang</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
