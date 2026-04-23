@@ -114,7 +114,6 @@ def show_contact_info():
 Email: konamicoco0123@gmail.com
 SĐT: 0329339523
 Địa chỉ: Cao Lãnh, Đồng Tháp, Việt Nam
-Website: www.hechuyengia.com
 """
     tk.Label(contact_win, text=contact_text, justify="left", padx=10, pady=10).pack()
     tk.Button(contact_win, text="Đóng", command=contact_win.destroy).pack(pady=10)
