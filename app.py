@@ -60,10 +60,37 @@ with app.app_context():
     db.session.commit()
     
     # Add machines
+    machine_names = {
+        'P1': 'Dell Precision 3660 Tower',
+        'P2': 'PC ASUS B760 / i7-13700',
+        'P3': 'HP Z2 Tower G9',
+        'P4': 'Acer Predator Orion 5000',
+        'P5': 'Dell OptiPlex 7010 Tower',
+        'P6': 'HP ProTower 400 G9',
+        'P7': 'Asus ProArt Station PD5',
+        'P8': 'Acer Aspire TC-1780',
+        'P9': 'Asus ExpertCenter D5',
+        'P10': 'Dell Vostro 3020 Tower',
+        'P11': 'HP Z4 G5 Workstation Tower',
+        'P12': 'Acer Veriton M6700G Tower',
+        'P13': 'Asus ExpertCenter D7 Tower',
+        'P14': 'HP EliteTower 800 G9',
+        'P15': 'Acer Veriton M4690G',
+        'P16': 'Acer Nitro 50 (N50-650)',
+        'P17': 'Acer ConceptD 300',
+        'P18': 'Dell OptiPlex Small Form Factor',
+        'P19': 'Dell Inspiron Desktop (3020 MT)',
+        'P20': 'Asus ExpertCenter D7 SFF',
+        'P21': 'HP Pro SFF 400 G9',
+        'P22': 'HP Victus 15L',
+        'P23': 'Acer Veriton S6690G',
+        'P24': 'Dell XPS 8960'
+    }
+    
     for code, desc in machine_descriptions.items():
         machine = Machine(
             code=code,
-            name=code,
+            name=machine_names.get(code, code),
             brand='',
             description=desc,
             price=0,
