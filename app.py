@@ -15,78 +15,80 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
     
-    # Populate initial data if empty
-    if Brand.query.first() is None:
-        from machines_desc import machine_descriptions
-        from data import rules
-        
-        # Add categories
-        brands = [
-            Brand(code='A1', name='Dell'),
-            Brand(code='A2', name='HP'),
-            Brand(code='A3', name='ASUS'),
-            Brand(code='A4', name='Acer'),
-            Brand(code='A5', name='Lenovo'),
-        ]
-        purposes = [
-            Purpose(code='B1', name='Gaming'),
-            Purpose(code='B2', name='Workstation/Đồ họa'),
-            Purpose(code='B3', name='Văn phòng'),
-        ]
-        specials = [
-            Special(code='C1', name='Standard'),
-            Special(code='C2', name='Premium'),
-        ]
-        cpus = [
-            CPU(code='D1', name='Intel Core i5'),
-            CPU(code='D2', name='Intel Core i7'),
-        ]
-        rams = [
-            RAM(code='E1', name='16GB'),
-            RAM(code='E2', name='32GB'),
-        ]
-        ssds = [
-            SSD(code='F1', name='256GB - 512GB'),
-            SSD(code='F2', name='512GB+'),
-        ]
-        prices = [
-            Price(code='G1', name='20M - 30M VND', min_price=20000000, max_price=30000000),
-            Price(code='G2', name='30M - 50M VND', min_price=30000000, max_price=50000000),
-        ]
-        
-        db.session.add_all(brands + purposes + specials + cpus + rams + ssds + prices)
-        db.session.commit()
-        
-        # Add machines
-        for code, desc in machine_descriptions.items():
-            machine = Machine(
-                code=code,
-                name=code,
-                brand='',
-                description=desc,
-                price=0,
-                image_path=''
+    # Drop and recreate tables to reset data
+    db.drop_all()
+    db.create_all()
+    
+    # Populate initial data
+    from machines_desc import machine_descriptions
+    from data import rules
+    
+    # Add categories
+    brands = [
+        Brand(code='A1', name='Dell'),
+        Brand(code='A2', name='HP'),
+        Brand(code='A3', name='ASUS'),
+        Brand(code='A4', name='Acer'),
+    ]
+    purposes = [
+        Purpose(code='B1', name='Văn phòng'),
+        Purpose(code='B2', name='Gaming'),
+        Purpose(code='B3', name='Đồ họa'),
+    ]
+    specials = [
+        Special(code='C1', name='Cần nhiều cổng kết nối'),
+        Special(code='C2', name='Độ bền, ổn định cao'),
+    ]
+    cpus = [
+        CPU(code='D1', name='i5/Ryzen5'),
+        CPU(code='D2', name='i7/Ryzen7'),
+    ]
+    rams = [
+        RAM(code='E1', name='16GB'),
+        RAM(code='E2', name='32GB trở lên'),
+    ]
+    ssds = [
+        SSD(code='F1', name='256GB'),
+        SSD(code='F2', name='512GB trở lên'),
+    ]
+    prices = [
+        Price(code='G1', name='Dưới 30 triệu VND', min_price=0, max_price=30000000),
+        Price(code='G2', name='30 triệu VND trở lên', min_price=30000000, max_price=999999999),
+    ]
+    
+    db.session.add_all(brands + purposes + specials + cpus + rams + ssds + prices)
+    db.session.commit()
+    
+    # Add machines
+    for code, desc in machine_descriptions.items():
+        machine = Machine(
+            code=code,
+            name=code,
+            brand='',
+            description=desc,
+            price=0,
+            image_path=''
+        )
+        db.session.add(machine)
+    db.session.commit()
+    
+    # Add recommendation rules
+    for rule_key, machine_code in rules.items():
+        parts = rule_key.split('^')
+        if len(parts) == 7:
+            rule = RecommendationRule(
+                rule_key=rule_key,
+                brand_code=parts[0],
+                purpose_code=parts[1],
+                special_code=parts[2],
+                cpu_code=parts[3],
+                ram_code=parts[4],
+                ssd_code=parts[5],
+                price_code=parts[6],
+                machine_code=machine_code
             )
-            db.session.add(machine)
-        db.session.commit()
-        
-        # Add recommendation rules
-        for rule_key, machine_code in rules.items():
-            parts = rule_key.split('^')
-            if len(parts) == 7:
-                rule = RecommendationRule(
-                    rule_key=rule_key,
-                    brand_code=parts[0],
-                    purpose_code=parts[1],
-                    special_code=parts[2],
-                    cpu_code=parts[3],
-                    ram_code=parts[4],
-                    ssd_code=parts[5],
-                    price_code=parts[6],
-                    machine_code=machine_code
-                )
-                db.session.add(rule)
-        db.session.commit()
+            db.session.add(rule)
+    db.session.commit()
 
 def get_brand_code(brand_name):
     """Lấy code từ tên brand"""
