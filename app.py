@@ -1,17 +1,50 @@
 from flask import Flask, render_template, request, jsonify
-from data import rules, machines, brands, purposes, specials, cpus, rams, ssds, prices
-from machines_desc import machine_descriptions
+from models import db, Brand, Purpose, Special, CPU, RAM, SSD, Price, Machine, RecommendationRule, SearchHistory
 import os
 
 app = Flask(__name__)
+
+# Database Configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///hechuyengia.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-def get_key_from_value(mapping, value):
-    """Convert display name to code"""
-    for k, v in mapping.items():
-        if v == value:
-            return k
-    return None
+db.init_app(app)
+
+def get_brand_code(brand_name):
+    """Lấy code từ tên brand"""
+    brand = Brand.query.filter_by(name=brand_name).first()
+    return brand.code if brand else None
+
+def get_purpose_code(purpose_name):
+    """Lấy code từ tên purpose"""
+    purpose = Purpose.query.filter_by(name=purpose_name).first()
+    return purpose.code if purpose else None
+
+def get_special_code(special_name):
+    """Lấy code từ tên special"""
+    special = Special.query.filter_by(name=special_name).first()
+    return special.code if special else None
+
+def get_cpu_code(cpu_name):
+    """Lấy code từ tên cpu"""
+    cpu = CPU.query.filter_by(name=cpu_name).first()
+    return cpu.code if cpu else None
+
+def get_ram_code(ram_name):
+    """Lấy code từ tên ram"""
+    ram = RAM.query.filter_by(name=ram_name).first()
+    return ram.code if ram else None
+
+def get_ssd_code(ssd_name):
+    """Lấy code từ tên ssd"""
+    ssd = SSD.query.filter_by(name=ssd_name).first()
+    return ssd.code if ssd else None
+
+def get_price_code(price_name):
+    """Lấy code từ tên price"""
+    price = Price.query.filter_by(name=price_name).first()
+    return price.code if price else None
 
 def recommend(user_inputs):
     """Generate recommendation based on user inputs"""
@@ -22,19 +55,30 @@ def recommend(user_inputs):
         else:
             return None
     key = '^'.join(key_parts)
-    return rules.get(key, None)
+    
+    # Tìm trong database
+    rule = RecommendationRule.query.filter_by(rule_key=key).first()
+    return rule.machine_code if rule else None
 
 @app.route('/')
 def index():
     """Home page with recommendation form"""
+    brands_list = Brand.query.all()
+    purposes_list = Purpose.query.all()
+    specials_list = Special.query.all()
+    cpus_list = CPU.query.all()
+    rams_list = RAM.query.all()
+    ssds_list = SSD.query.all()
+    prices_list = Price.query.all()
+    
     context = {
-        'brands': list(brands.values()),
-        'purposes': list(purposes.values()),
-        'specials': list(specials.values()),
-        'cpus': list(cpus.values()),
-        'rams': list(rams.values()),
-        'ssds': list(ssds.values()),
-        'prices': list(prices.values()),
+        'brands': [b.name for b in brands_list],
+        'purposes': [p.name for p in purposes_list],
+        'specials': [s.name for s in specials_list],
+        'cpus': [c.name for c in cpus_list],
+        'rams': [r.name for r in rams_list],
+        'ssds': [s.name for s in ssds_list],
+        'prices': [p.name for p in prices_list],
     }
     return render_template('index.html', **context)
 
@@ -47,37 +91,37 @@ def api_recommend():
     
     # Map display names back to codes
     if data.get('brand'):
-        code = get_key_from_value(brands, data['brand'])
+        code = get_brand_code(data['brand'])
         if code:
             user_inputs['A'] = code
     
     if data.get('purpose'):
-        code = get_key_from_value(purposes, data['purpose'])
+        code = get_purpose_code(data['purpose'])
         if code:
             user_inputs['B'] = code
     
     if data.get('special'):
-        code = get_key_from_value(specials, data['special'])
+        code = get_special_code(data['special'])
         if code:
             user_inputs['C'] = code
     
     if data.get('cpu'):
-        code = get_key_from_value(cpus, data['cpu'])
+        code = get_cpu_code(data['cpu'])
         if code:
             user_inputs['D'] = code
     
     if data.get('ram'):
-        code = get_key_from_value(rams, data['ram'])
+        code = get_ram_code(data['ram'])
         if code:
             user_inputs['E'] = code
     
     if data.get('ssd'):
-        code = get_key_from_value(ssds, data['ssd'])
+        code = get_ssd_code(data['ssd'])
         if code:
             user_inputs['F'] = code
     
     if data.get('price'):
-        code = get_key_from_value(prices, data['price'])
+        code = get_price_code(data['price'])
         if code:
             user_inputs['G'] = code
     
@@ -97,25 +141,39 @@ def api_recommend():
             'message': 'Hiện tại không có máy phù hợp với yêu cầu của bạn.'
         }), 404
     
-    if p_code not in machines:
+    # Lấy thông tin máy từ database
+    machine = Machine.query.filter_by(code=p_code).first()
+    
+    if not machine:
         return jsonify({
             'success': False,
             'message': 'Không tìm thấy thông tin máy này.'
         }), 404
-    
-    machine_name = machines[p_code]
-    description = machine_descriptions.get(p_code, 'Hiện chưa có mô tả chi tiết cho máy này.')
     
     # Check if image exists
     p_num = p_code[1:]
     image_path = os.path.join('static', 'images', f'{p_num}.png')
     image_exists = os.path.exists(image_path)
     
+    # Save search history
+    history = SearchHistory(
+        brand_code=user_inputs.get('A'),
+        purpose_code=user_inputs.get('B'),
+        special_code=user_inputs.get('C'),
+        cpu_code=user_inputs.get('D'),
+        ram_code=user_inputs.get('E'),
+        ssd_code=user_inputs.get('F'),
+        price_code=user_inputs.get('G'),
+        result_machine_code=p_code
+    )
+    db.session.add(history)
+    db.session.commit()
+    
     return jsonify({
         'success': True,
         'p_code': p_code,
-        'machine_name': machine_name,
-        'description': description,
+        'machine_name': machine.name,
+        'description': machine.description,
         'image_exists': image_exists,
         'image_url': f'/static/images/{p_num}.png' if image_exists else None,
         'selections': {
@@ -148,14 +206,13 @@ Cập nhật dữ liệu đến năm 2026.
 '''
     })
 
-@app.route('/machines/<machine_code>')
+@app.route('/machine/<machine_code>')
 def machine_detail(machine_code):
     """Detailed page for a specific machine"""
-    if machine_code not in machines:
-        return "Máy không tìm thấy", 404
+    machine = Machine.query.filter_by(code=machine_code).first()
     
-    machine_name = machines[machine_code]
-    description = machine_descriptions.get(machine_code, 'Hiện chưa có mô tả chi tiết cho máy này.')
+    if not machine:
+        return "Máy không tìm thấy", 404
     
     p_num = machine_code[1:]
     image_path = os.path.join('static', 'images', f'{p_num}.png')
@@ -163,12 +220,13 @@ def machine_detail(machine_code):
     
     return render_template('machine_detail.html',
                           machine_code=machine_code,
-                          machine_name=machine_name,
-                          description=description,
+                          machine_name=machine.name,
+                          description=machine.description,
                           image_exists=image_exists,
                           image_url=f'/static/images/{p_num}.png' if image_exists else None)
 
 if __name__ == '__main__':
+    app.run(debug=True)
     debug_mode = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
     port = int(os.getenv('PORT', 5000))
     app.run(debug=debug_mode, host='0.0.0.0', port=port)
