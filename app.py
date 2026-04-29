@@ -15,9 +15,12 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
     
-    # Drop and recreate tables to reset data
-    db.drop_all()
-    db.create_all()
+    # Only reset database if explicitly requested via environment variable
+    # To reset: set RESET_DB=1 before running
+    if os.getenv('RESET_DB', 'false').lower() == 'true':
+        print("⚠️  Resetting database...")
+        db.drop_all()
+        db.create_all()
     
     # Populate initial data
     from machines_desc import machine_descriptions
@@ -117,40 +120,24 @@ with app.app_context():
             db.session.add(rule)
     db.session.commit()
 
-def get_brand_code(brand_name):
-    """Lấy code từ tên brand"""
-    brand = Brand.query.filter_by(name=brand_name).first()
-    return brand.code if brand else None
+# Mapping giữa category code và model class
+CODE_MODEL_MAP = {
+    'A': Brand,
+    'B': Purpose,
+    'C': Special,
+    'D': CPU,
+    'E': RAM,
+    'F': SSD,
+    'G': Price
+}
 
-def get_purpose_code(purpose_name):
-    """Lấy code từ tên purpose"""
-    purpose = Purpose.query.filter_by(name=purpose_name).first()
-    return purpose.code if purpose else None
-
-def get_special_code(special_name):
-    """Lấy code từ tên special"""
-    special = Special.query.filter_by(name=special_name).first()
-    return special.code if special else None
-
-def get_cpu_code(cpu_name):
-    """Lấy code từ tên cpu"""
-    cpu = CPU.query.filter_by(name=cpu_name).first()
-    return cpu.code if cpu else None
-
-def get_ram_code(ram_name):
-    """Lấy code từ tên ram"""
-    ram = RAM.query.filter_by(name=ram_name).first()
-    return ram.code if ram else None
-
-def get_ssd_code(ssd_name):
-    """Lấy code từ tên ssd"""
-    ssd = SSD.query.filter_by(name=ssd_name).first()
-    return ssd.code if ssd else None
-
-def get_price_code(price_name):
-    """Lấy code từ tên price"""
-    price = Price.query.filter_by(name=price_name).first()
-    return price.code if price else None
+def get_code_by_category(category, display_name):
+    """Lấy code từ tên display dựa vào category (A-G)"""
+    if category not in CODE_MODEL_MAP:
+        return None
+    model_class = CODE_MODEL_MAP[category]
+    obj = model_class.query.filter_by(name=display_name).first()
+    return obj.code if obj else None
 
 def recommend(user_inputs):
     """Generate recommendation based on user inputs"""
@@ -194,42 +181,22 @@ def api_recommend():
     data = request.json
     
     user_inputs = {}
+    categories = {
+        'brand': 'A',
+        'purpose': 'B',
+        'special': 'C',
+        'cpu': 'D',
+        'ram': 'E',
+        'ssd': 'F',
+        'price': 'G'
+    }
     
     # Map display names back to codes
-    if data.get('brand'):
-        code = get_brand_code(data['brand'])
-        if code:
-            user_inputs['A'] = code
-    
-    if data.get('purpose'):
-        code = get_purpose_code(data['purpose'])
-        if code:
-            user_inputs['B'] = code
-    
-    if data.get('special'):
-        code = get_special_code(data['special'])
-        if code:
-            user_inputs['C'] = code
-    
-    if data.get('cpu'):
-        code = get_cpu_code(data['cpu'])
-        if code:
-            user_inputs['D'] = code
-    
-    if data.get('ram'):
-        code = get_ram_code(data['ram'])
-        if code:
-            user_inputs['E'] = code
-    
-    if data.get('ssd'):
-        code = get_ssd_code(data['ssd'])
-        if code:
-            user_inputs['F'] = code
-    
-    if data.get('price'):
-        code = get_price_code(data['price'])
-        if code:
-            user_inputs['G'] = code
+    for field, category in categories.items():
+        if data.get(field):
+            code = get_code_by_category(category, data[field])
+            if code:
+                user_inputs[category] = code
     
     # Check if all fields are filled
     if len(user_inputs) < 7:
@@ -331,8 +298,24 @@ def machine_detail(machine_code):
                           image_exists=image_exists,
                           image_url=f'/static/images/{p_num}.png' if image_exists else None)
 
+@app.route('/api/search-history')
+def get_search_history():
+    """API endpoint to view search history"""
+    history = SearchHistory.query.order_by(SearchHistory.created_at.desc()).limit(50).all()
+    return jsonify([{
+        'id': h.id,
+        'brand_code': h.brand_code,
+        'purpose_code': h.purpose_code,
+        'special_code': h.special_code,
+        'cpu_code': h.cpu_code,
+        'ram_code': h.ram_code,
+        'ssd_code': h.ssd_code,
+        'price_code': h.price_code,
+        'result_machine_code': h.result_machine_code,
+        'created_at': h.created_at.isoformat()
+    } for h in history])
+
 if __name__ == '__main__':
-    app.run(debug=True)
     debug_mode = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
     port = int(os.getenv('PORT', 5000))
     app.run(debug=debug_mode, host='0.0.0.0', port=port)

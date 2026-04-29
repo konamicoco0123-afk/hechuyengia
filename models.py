@@ -68,16 +68,6 @@ class Machine(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    def to_dict(self):
-        return {
-            'code': self.code,
-            'name': self.name,
-            'brand': self.brand,
-            'description': self.description,
-            'price': self.price,
-            'image_path': self.image_path
-        }
-
 # Recommendation Rule Table
 class RecommendationRule(db.Model):
     __tablename__ = 'recommendation_rules'
@@ -94,12 +84,6 @@ class RecommendationRule(db.Model):
     machine_code = db.Column(db.String(10))  # Mã máy được khuyến nghị (có thể NULL)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    def to_dict(self):
-        return {
-            'rule_key': self.rule_key,
-            'machine_code': self.machine_code
-        }
 
 # Search History Table (Optional - để track lịch sử tìm kiếm)
 class SearchHistory(db.Model):
