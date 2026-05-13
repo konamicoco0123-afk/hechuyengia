@@ -26,8 +26,8 @@ with app.app_context():
     # Add categories
     brands = [
         Brand(code='A1', name='Dell'),
-        Brand(code='A2', name='HP'),
-        Brand(code='A3', name='ASUS'),
+        Brand(code='A2', name='ASUS'),
+        Brand(code='A3', name='HP'),
         Brand(code='A4', name='Acer'),
     ]
     purposes = [
