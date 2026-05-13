@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from models import db, Brand, Purpose, Special, CPU, RAM, SSD, Price, Machine, RecommendationRule, SearchHistory
 import os
 
@@ -256,10 +256,20 @@ def api_recommend():
             'message': 'Không tìm thấy thông tin máy này.'
         }), 404
     
-    # Check if image exists
+    # Check if image exists (try both locations)
     p_num = p_code[1:]
-    image_path = os.path.join('static', 'images', f'{p_num}.png')
-    image_exists = os.path.exists(image_path)
+    image_path_static = os.path.join('static', 'images', f'{p_num}.png')
+    image_path_anhmay = os.path.join('anhmay', f'{p_num}.png')
+    
+    image_exists = False
+    image_url = None
+    
+    if os.path.exists(image_path_static):
+        image_exists = True
+        image_url = f'/static/images/{p_num}.png'
+    elif os.path.exists(image_path_anhmay):
+        image_exists = True
+        image_url = f'/anhmay/{p_num}.png'
     
     # Save search history
     history = SearchHistory(
@@ -281,7 +291,7 @@ def api_recommend():
         'machine_name': machine.name,
         'description': machine.description,
         'image_exists': image_exists,
-        'image_url': f'/static/images/{p_num}.png' if image_exists else None,
+        'image_url': image_url,
         'selections': {
             'brand': data.get('brand'),
             'purpose': data.get('purpose'),
@@ -312,6 +322,11 @@ Cập nhật dữ liệu đến năm 2026.
 '''
     })
 
+@app.route('/anhmay/<filename>')
+def serve_anhmay(filename):
+    """Serve images from anhmay directory"""
+    return send_from_directory(os.path.join(os.path.dirname(__file__), 'anhmay'), filename)
+
 @app.route('/machine/<machine_code>')
 def machine_detail(machine_code):
     """Detailed page for a specific machine"""
@@ -321,18 +336,27 @@ def machine_detail(machine_code):
         return "Máy không tìm thấy", 404
     
     p_num = machine_code[1:]
-    image_path = os.path.join('static', 'images', f'{p_num}.png')
-    image_exists = os.path.exists(image_path)
+    image_path_static = os.path.join('static', 'images', f'{p_num}.png')
+    image_path_anhmay = os.path.join('anhmay', f'{p_num}.png')
+    
+    image_exists = False
+    image_url = None
+    
+    if os.path.exists(image_path_static):
+        image_exists = True
+        image_url = f'/static/images/{p_num}.png'
+    elif os.path.exists(image_path_anhmay):
+        image_exists = True
+        image_url = f'/anhmay/{p_num}.png'
     
     return render_template('machine_detail.html',
                           machine_code=machine_code,
                           machine_name=machine.name,
                           description=machine.description,
                           image_exists=image_exists,
-                          image_url=f'/static/images/{p_num}.png' if image_exists else None)
+                          image_url=image_url)
 
 if __name__ == '__main__':
-    app.run(debug=True)
-    debug_mode = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
+    debug_mode = os.getenv('FLASK_DEBUG', 'true').lower() == 'true'
     port = int(os.getenv('PORT', 5000))
     app.run(debug=debug_mode, host='0.0.0.0', port=port)
